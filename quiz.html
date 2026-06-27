@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quiz – Kokteje & Pije</title>
+  <style>
+    /* ── Bazë ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:      #c9a84c;
+      --gold-lt:   #e8c97a;
+      --burg:      #6b1a2a;
+      --burg-dk:   #4a1020;
+      --cream:     #fdf6ec;
+      --cream-dk:  #f0e4ce;
+      --text:      #2d1a0e;
+      --text-lt:   #6b4c30;
+      --correct:   #2e7d4f;
+      --correct-bg:#e8f5ee;
+      --wrong:     #b71c1c;
+      --wrong-bg:  #fdecea;
+      --shadow:    0 4px 24px rgba(107,26,42,.13);
+      --radius:    18px;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #2d1a0e 0%, #6b1a2a 55%, #3a0a18 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: var(--text);
+      padding: 16px;
+    }
+
+    /* ── Karta kryesore ── */
+    .card {
+      background: var(--cream);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow), 0 0 0 3px var(--gold);
+      width: 100%;
+      max-width: 680px;
+      overflow: hidden;
+      animation: slideUp .45s cubic-bezier(.22,1,.36,1);
+    }
+
+    @keyframes slideUp {
+      from { opacity:0; transform:translateY(30px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, var(--burg-dk), var(--burg));
+      padding: 24px 28px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .header-title {
+      color: var(--gold-lt);
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: .5px;
+    }
+    .header-sub {
+      color: rgba(255,255,255,.65);
+      font-size: .82rem;
+      margin-top: 2px;
+    }
+    .score-badge {
+      background: var(--gold);
+      color: var(--burg-dk);
+      font-weight: 800;
+      font-size: .9rem;
+      border-radius: 50px;
+      padding: 6px 16px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ── Progress bar ── */
+    .progress-wrap {
+      background: var(--cream-dk);
+      height: 7px;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold), var(--gold-lt));
+      transition: width .5s ease;
+      border-radius: 0 4px 4px 0;
+    }
+
+    /* ── Body ── */
+    .body { padding: 28px; }
+
+    /* ── Kategoria ── */
+    .category-tag {
+      display: inline-block;
+      background: var(--cream-dk);
+      color: var(--burg);
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 50px;
+      margin-bottom: 14px;
+      border: 1px solid rgba(107,26,42,.2);
+    }
+
+    /* ── Pyetja ── */
+    .question {
+      font-size: 1.13rem;
+      font-weight: 700;
+      line-height: 1.55;
+      color: var(--burg-dk);
+      margin-bottom: 22px;
+    }
+
+    /* ── Opsionet ── */
+    .options { display: flex; flex-direction: column; gap: 11px; }
+
+    .option {
+      background: #fff;
+      border: 2px solid var(--cream-dk);
+      border-radius: 12px;
+      padding: 14px 18px;
+      cursor: pointer;
+      font-size: .95rem;
+      color: var(--text);
+      line-height: 1.45;
+      transition: border-color .2s, background .2s, transform .15s;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .option-letter {
+      flex-shrink: 0;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--cream-dk);
+      color: var(--burg);
+      font-weight: 800;
+      font-size: .8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+      transition: background .2s, color .2s;
+    }
+
+    .option:hover:not(.disabled) {
+      border-color: var(--gold);
+      background: #fff9f0;
+      transform: translateX(3px);
+    }
+    .option:hover:not(.disabled) .option-letter {
+      background: var(--gold);
+      color: #fff;
+    }
+
+    /* Feedback pas përgjigjes */
+    .option.correct {
+      border-color: var(--correct);
+      background: var(--correct-bg);
+    }
+    .option.correct .option-letter {
+      background: var(--correct);
+      color: #fff;
+    }
+    .option.wrong {
+      border-color: var(--wrong);
+      background: var(--wrong-bg);
+    }
+    .option.wrong .option-letter {
+      background: var(--wrong);
+      color: #fff;
+    }
+    .option.disabled { cursor: default; }
+    .option.disabled:hover { transform: none; }
+
+    /* ── Feedback mesazhi ── */
+    .feedback {
+      margin-top: 18px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: .92rem;
+      display: none;
+      animation: fadeIn .3s ease;
+    }
+    .feedback.show { display: block; }
+    .feedback.ok  { background: var(--correct-bg); color: var(--correct); border-left: 4px solid var(--correct); }
+    .feedback.err { background: var(--wrong-bg);   color: var(--wrong);   border-left: 4px solid var(--wrong); }
+
+    @keyframes fadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:none} }
+
+    /* ── Butoni Tjetër ── */
+    .btn-next {
+      margin-top: 22px;
+      width: 100%;
+      background: linear-gradient(135deg, var(--burg), var(--burg-dk));
+      color: var(--gold-lt);
+      border: none;
+      border-radius: 12px;
+      padding: 15px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: .5px;
+      transition: opacity .2s, transform .15s;
+      display: none;
+    }
+    .btn-next.show { display: block; }
+    .btn-next:hover { opacity: .9; transform: scale(1.01); }
+
+    /* ── Ekrani rezultatit ── */
+    .result-screen {
+      padding: 36px 28px;
+      text-align: center;
+      display: none;
+    }
+    .result-screen.show { display: block; }
+
+    .result-icon { font-size: 4rem; margin-bottom: 10px; }
+    .result-score {
+      font-size: 3rem;
+      font-weight: 900;
+      color: var(--burg);
+      line-height: 1;
+    }
+    .result-out-of {
+      color: var(--text-lt);
+      font-size: 1rem;
+      margin-top: 4px;
+      margin-bottom: 14px;
+    }
+    .result-msg {
+      font-size: 1.05rem;
+      color: var(--text);
+      line-height: 1.6;
+      margin-bottom: 28px;
+      background: var(--cream-dk);
+      padding: 14px 18px;
+      border-radius: 12px;
+    }
+
+    .result-bars { margin-bottom: 24px; }
+    .result-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-size: .85rem;
+    }
+    .result-bar-label { width: 90px; text-align: right; color: var(--text-lt); }
+    .result-bar-track {
+      flex: 1;
+      height: 12px;
+      background: var(--cream-dk);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .result-bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      background: linear-gradient(90deg, var(--gold), var(--gold-lt));
+      transition: width 1s cubic-bezier(.22,1,.36,1);
+    }
+    .result-bar-pct { width: 36px; color: var(--burg); font-weight: 700; }
+
+    .btn-restart {
+      background: linear-gradient(135deg, var(--gold), var(--gold-lt));
+      color: var(--burg-dk);
+      border: none;
+      border-radius: 12px;
+      padding: 15px 36px;
+      font-size: 1.05rem;
+      font-weight: 800;
+      cursor: pointer;
+      letter-spacing: .5px;
+      transition: opacity .2s, transform .15s;
+      box-shadow: 0 4px 16px rgba(201,168,76,.4);
+    }
+    .btn-restart:hover { opacity: .9; transform: scale(1.02); }
+
+    /* ── Animacion pyetje ── */
+    .quiz-body { animation: fadeIn .35s ease; }
+
+    /* ── Mobile ── */
+    @media (max-width: 480px) {
+      .header { padding: 18px 18px 16px; }
+      .body { padding: 20px; }
+      .question { font-size: 1rem; }
+      .option { padding: 12px 14px; font-size: .9rem; }
+      .result-screen { padding: 28px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="card" id="app">
+
+  <!-- QUIZ ekrani -->
+  <div id="quizScreen">
+    <div class="header">
+      <div>
+        <div class="header-title">🍸 Quiz – Kokteje & Pije</div>
+        <div class="header-sub" id="progressLabel">Pyetja 1 nga 65</div>
+      </div>
+      <div class="score-badge" id="scoreBadge">0 pikë</div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-bar" id="progressBar" style="width:0%"></div>
+    </div>
+
+    <div class="body">
+      <div class="quiz-body" id="quizBody">
+        <div class="category-tag" id="catTag">Kategoria</div>
+        <div class="question" id="questionText">...</div>
+        <div class="options" id="optionsList"></div>
+        <div class="feedback" id="feedback"></div>
+        <button class="btn-next" id="btnNext" onclick="nextQuestion()">Pyetja tjetër →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REZULTAT ekrani -->
+  <div class="result-screen" id="resultScreen">
+    <div class="result-icon" id="resultIcon">🏆</div>
+    <div class="result-score" id="resultScore">0</div>
+    <div class="result-out-of" id="resultOutOf">pikë nga 65</div>
+    <div class="result-msg" id="resultMsg"></div>
+    <div class="result-bars" id="resultBars"></div>
+    <button class="btn-restart" onclick="restartQuiz()">↺ Fillo sërish</button>
+  </div>
+
+</div>
+
+<script>
+/* ================================================================
+   BAZA E TË DHËNAVE – Pyetjet e plota
+   Struktura: { category, question, options: [string×4], correct: 0-3 }
+   "correct" është GJITHMONË indeksi i opsionit të saktë para shuffle-it.
+   Shuffle-i i opsioneve ndodh dinamikisht në startQuiz().
+================================================================ */
+const ALL_QUESTIONS = [
+
+  /* ───────── HOMEMADE COCKTAILS ───────── */
+  {
+    category: "Kokteje Shtëpie",
+    question: "Cilët janë përbërësit e koktejit Bramble?",
+    options: [
+      "Gin, leng limoni, shurup sheqeri, shurup manaferre",
+      "Vodka, leng portokalli, shurup vanilje, soda",
+      "Rum, leng panxhari, ginger beer, bajame",
+      "Tekila, leng limoni, liker qitro, kripë"
+    ],
+    correct: 0
+  },
+  {
+    category: "Kokteje Shtëpie",
+    question: "Bramble klasifikohet si çfarë lloj pije?",
+    options: [
+      "Digestiv",
+      "Aperitiv",
+      "Long Drink",
+      "Shot"
+    ],
+    correct: 1
+  },
+  {
+    category: "Kokteje Shtëpie",
+    question: "Cila është shija karakteristike e Bramble-it?",
+    options: [
+      "I ëmbël",
+      "I thartë",
+      "I athët",
+      "I thatë"
+    ],
+    correct: 2
+  },
+  {
+    category: "Kokteje Shtëpie",
+    question: "Cilët janë përbërësit e 'Old Lemonade'?",
+    options: [
+      "Rum, lime, mente, sheqerkafë",
+      "Vodka, liker portokalli, sheqerkafë, leng limoni",
+      "Gin, leng grejpfruti, soda, rozmarinë",
+      "Tekila, leng limoni, triple sec, kripë"
+    ],
+    correct: 1
+  },
+  {
+    category: "Kokteje Shtëpie",
+    question: "Cila është shija e koktejit 'Vanilla Ice'?",
+    options: [
+      "I athët",
+      "I thatë",
+      "I ëmbël",
+      "I mesëm"
+    ],
+    correct: 2
+  },
+  {
+    category: "Kokteje Shtëpie",
+    question: "Cilët janë përbërësit e 'Vanilla Ice'?",
+    options: [
+      "Gin, shurup rose, prosecco, lime",
+      "Rum, ginger beer, mente, amaro",
+      "Vodka, leng limoni, shurup vanilje, shurup pjepri, frut pasioni",
+      "Tekila, leng limoni, liker portokalli, sheqer"
+    ],
+    correct: 2
+  },
+  {
+    category: "Kokteje Shtëpie",
+    question: "Cili spirit bazë përdoret në koktejin Terrarosa?",
+    options: [
+      "Vodka",
+      "Gin",
+      "Rum",
+      "Tekila"
+    ],
+    correct: 2
+  },
+  {
+    category: "Kokteje Shtëpie",
+    question: "Cili element dekorativ karakteristik ka kokteji Terrarosa dhe Roses of Garden?",
+    options: [
+      "Portokall i tharë",
+      "Çaj trendafili afrikan",
+      "Pjepër i freskët",
+      "Mente e freskët"
+    ],
+    correct: 1
+  },
+  {
+    category: "Kokteje Shtëpie",
+    question: "Cilët janë përbërësit e 'Roses of Garden'?",
+    options: [
+      "Vodka, shurup jasemine, liker borronice, soda",
+      "Tekila, shurup rose, leng limoni, ginger beer",
+      "Gin, leng limoni, shurup rose, shurup jasemine, 2 lampone, prosecco",
+      "Rum, leng panxhari, amaro, mente"
+    ],
+    correct: 2
+  },
+  {
+    category: "Kokteje Shtëpie",
+    question: "Twisted Paloma është twist i cilit koktej klasik?",
+    options: [
+      "Mojito",
+      "Negroni",
+      "Paloma klasik",
+      "Margarita"
+    ],
+    correct: 2
+  },
+  {
+    category: "Kokteje Shtëpie",
+    question: "Cilët janë përbërësit e 'Twisted Paloma'?",
+    options: [
+      "Rum, lime, mente, soda water",
+      "Tekila, leng limoni, liker qitro, soda qitro",
+      "Gin, shurup rose, jasemine, prosecco",
+      "Vodka, sheqerkafë, leng limoni, liker portokalli"
+    ],
+    correct: 1
+  },
+  {
+    category: "Kokteje Shtëpie",
+    question: "Cila është baza e 'Pueblo Magico'?",
+    options: [
+      "Gin me infuzion kardamomi",
+      "Rum me infuzion kanelle",
+      "Tekila me infuzion kamomil dhe çaj trendafili afrikan",
+      "Vodka me infuzion jasemine"
+    ],
+    correct: 2
+  },
+  {
+    category: "Kokteje Shtëpie",
+    question: "Cilët botanikalë/produkte kryesore ka 'Hendricks Basil Smash'?",
+    options: [
+      "Campari, martini rosso, gin, portokall",
+      "Hendricks gin, borzilok, xhenxhefil, kastravec, leng limoni, shurup sheqeri",
+      "Vodka, liker kafeje, espresso, shurup sheqeri",
+      "Tekila, mango, piper i kuq, leng limoni"
+    ],
+    correct: 1
+  },
+
+  /* ───────── CLASSIC COCKTAILS ───────── */
+  {
+    category: "Kokteje Klasike",
+    question: "Cilët janë përbërësit e Mojito klasik?",
+    options: [
+      "Vodka, lime, xhenxhefil, soda water",
+      "Gin, kastravec, toniksoda, lime",
+      "Rum, lime, gjethe mente, sheqerkafë, soda water",
+      "Tekila, leng limoni, kripë, shurup agave"
+    ],
+    correct: 2
+  },
+  {
+    category: "Kokteje Klasike",
+    question: "Cila është shija e Mojito klasik?",
+    options: [
+      "I athët",
+      "I mesëm",
+      "I ëmbël",
+      "I thatë"
+    ],
+    correct: 1
+  },
+  {
+    category: "Kokteje Shtëpie",
+    question: "Cilët janë përbërësit e Daiquiri klasik?",
+    options: [
+      "Vodka, leng limoni, shurup sheqeri",
+      "Gin, lime, soda water",
+      "Rum, leng limoni, shurup sheqeri",
+      "Tekila, leng limoni, triple sec"
+    ],
+    correct: 2
+  },
+  {
+    category: "Kokteje Klasike",
+    question: "Cili është klasifikimi i koktejit Daiquiri?",
+    options: [
+      "Digestiv, i ëmbël",
+      "Aperitiv, i athët",
+      "Long drink, i mesëm",
+      "Digestiv, i thatë"
+    ],
+    correct: 1
+  },
+  {
+    category: "Kokteje Klasike",
+    question: "Cilët janë tre përbërësit e Negroni klasik?",
+    options: [
+      "Vodka, vermouth i bardhë, shëllirë ulliri",
+      "Rum, Campari, Aperol",
+      "Campari, Martini Rosso, Gin",
+      "Bourbon, angostura bitter, sheqer"
+    ],
+    correct: 2
+  },
+  {
+    category: "Kokteje Klasike",
+    question: "Cila është shija e koktejit Negroni?",
+    options: [
+      "I ëmbël",
+      "I mesëm",
+      "I thatë",
+      "I athët"
+    ],
+    correct: 3
+  },
+  {
+    category: "Kokteje Klasike",
+    question: "Cilët janë përbërësit e Vodka Sour?",
+    options: [
+      "Vodka, leng limoni, pure pasioni, frut pasioni",
+      "Gin, leng grejpfruti, shurup elderflower",
+      "Rum, sheqerkafë, lime, soda",
+      "Tekila, leng limoni, kripë, triple sec"
+    ],
+    correct: 0
+  },
+  {
+    category: "Kokteje Klasike",
+    question: "Cilët janë përbërësit e Margarita klasike?",
+    options: [
+      "Vodka, triple sec, leng limoni",
+      "Gin, liker portokalli, leng limoni",
+      "Tekila silver, leng limoni, liker portokalli",
+      "Rum, leng limoni, shurup sheqeri"
+    ],
+    correct: 2
+  },
+  {
+    category: "Kokteje Klasike",
+    question: "Cili spirit bazë përdoret në Old Fashion?",
+    options: [
+      "Scotch Whisky",
+      "Bourbon Whiskey",
+      "Irish Whiskey",
+      "Tennessee Whiskey"
+    ],
+    correct: 1
+  },
+  {
+    category: "Kokteje Klasike",
+    question: "Old Fashion klasifikohet si?",
+    options: [
+      "Aperitiv, i athët",
+      "Aperitiv, i mesëm",
+      "Digestiv, i thatë",
+      "Long drink, i ëmbël"
+    ],
+    correct: 2
+  },
+  {
+    category: "Kokteje Klasike",
+    question: "Cilët janë përbërësit e Cosmopolitan?",
+    options: [
+      "Gin, toniksoda, lime, kastravec",
+      "Vodka, leng limoni, liker portokalli, leng borronice të kuqe",
+      "Rum, coca-cola, lime, mente",
+      "Tekila, grapefruit soda, kripë"
+    ],
+    correct: 1
+  },
+  {
+    category: "Kokteje Klasike",
+    question: "Cila është shija e Cosmopolitan?",
+    options: [
+      "I ëmbël",
+      "I thatë",
+      "I mesëm",
+      "I athët"
+    ],
+    correct: 3
+  },
+  {
+    category: "Kokteje Klasike",
+    question: "Long Island Ice Tea përmban sa lloje spirita?",
+    options: [
+      "Dy (vodka dhe rum)",
+      "Tre (vodka, tekila, xhin)",
+      "Pesë (vodka, tekila, rum i bardhë, xhin, triple sec)",
+      "Katër (vodka, rum, bourbon, gin)"
+    ],
+    correct: 2
+  },
+  {
+    category: "Kokteje Klasike",
+    question: "Cilët janë të gjithë përbërësit e Long Island Ice Tea?",
+    options: [
+      "Vodka, tekila, rum i bardhë, xhin, triple sec, lëng limoni, cola",
+      "Vodka, rum, gin, bourbon, angostura, soda",
+      "Tekila, campari, vodka, triple sec, lëng grejpfruti",
+      "Rum, gin, aperol, lëng limoni, prosecco"
+    ],
+    correct: 0
+  },
+  {
+    category: "Kokteje Klasike",
+    question: "Cili është baza e Dirty Martini?",
+    options: [
+      "Vodkë ose xhin, vermut i thatë, shëllirë ulliri",
+      "Bourbon, angostura bitter, sheqer",
+      "Rum, leng limoni, shurup sheqeri",
+      "Tekila, triple sec, kripë"
+    ],
+    correct: 0
+  },
+  {
+    category: "Kokteje Klasike",
+    question: "Cila është shija karakteristike e Dirty Martini?",
+    options: [
+      "I ëmbël",
+      "I mesëm",
+      "I athët",
+      "Dry (I thatë)"
+    ],
+    correct: 3
+  },
+  {
+    category: "Kokteje Klasike",
+    question: "Espresso Martini klasifikohet si?",
+    options: [
+      "Aperitiv, i athët",
+      "Digestiv, i mesëm",
+      "Long drink, i ëmbël",
+      "Shot, i fortë"
+    ],
+    correct: 1
+  },
+  {
+    category: "Kokteje Klasike",
+    question: "Cilët janë përbërësit e Espresso Martini?",
+    options: [
+      "Gin, chartreuse, shurup sheqeri, soda",
+      "Bourbon, kafe, krem, sheqer",
+      "Vodkë, kafe espresso, liker kafeje, shurup sheqeri",
+      "Rum, Baileys, espresso, vanilje"
+    ],
+    correct: 2
+  },
+  {
+    category: "Kokteje Klasike",
+    question: "Si përgatitet Frozen Margarita/Daiquiri?",
+    options: [
+      "Me shaker dhe akull të grimcuar",
+      "Me shtim prosecco ftohur",
+      "Në blender me akull",
+      "Me teknikën muddling dhe soda"
+    ],
+    correct: 2
+  },
+  {
+    category: "Kokteje Klasike",
+    question: "Cilët shije shtesë ofrohen për Frozen Margarita?",
+    options: [
+      "Vanilje, çokollatë, banane",
+      "Mango, luleshtrydhe, frut pasioni (ose spicy mango me piper të kuq)",
+      "Portokall, mandarine, lime",
+      "Pjeshkë, kivi, xhenxhefil"
+    ],
+    correct: 1
+  },
+
+  /* ───────── APERITIF & LONG DRINKS ───────── */
+  {
+    category: "Aperitif & Long Drinks",
+    question: "Cilët janë tre përbërësit e Aperol Spritz?",
+    options: [
+      "Campari, prosecco, soda water",
+      "Aperol, prosecco, soda water",
+      "Aperol, gin, toniksoda",
+      "Campari, vodka, soda"
+    ],
+    correct: 1
+  },
+  {
+    category: "Aperitif & Long Drinks",
+    question: "Cila është ndryshimi midis Aperol Spritz dhe Campari Spritz?",
+    options: [
+      "Njëra ka rum, tjetra ka gin",
+      "Campari Spritz ka shije të thatë, Aperol Spritz ka shije të mesme",
+      "Njëra ka vodka, tjetra ka tekila",
+      "Campari Spritz ka lëng portokalli"
+    ],
+    correct: 1
+  },
+  {
+    category: "Aperitif & Long Drinks",
+    question: "Cilët janë përbërësit e Hugo Spritz?",
+    options: [
+      "Aperol, prosecco, portokall, soda",
+      "Campari, vermouth, soda, lime",
+      "Shurup elderflower, prosecco, soda water, mente, lime",
+      "Shurup rose, xhin, toniksoda, lampone"
+    ],
+    correct: 2
+  },
+  {
+    category: "Aperitif & Long Drinks",
+    question: "Cili element dallon Millenium Spritz nga Hugo Spritz?",
+    options: [
+      "Millenium ka Aperol, Hugo nuk ka",
+      "Millenium ka shurup jasemine dhe ginger beer; Hugo ka elderflower",
+      "Millenium ka vodka, Hugo ka rum",
+      "Hugo ka campari, Millenium ka aperol"
+    ],
+    correct: 1
+  },
+  {
+    category: "Aperitif & Long Drinks",
+    question: "Cilët janë përbërësit e Millenium Spritz?",
+    options: [
+      "Shurup rose, vodka, frut pasioni, prosecco",
+      "Aperol, prosecco, soda, portokall",
+      "Shurup jasemine, prosecco, ginger beer, mente, lime",
+      "Gin, elderflower, toniksoda, kastravec"
+    ],
+    correct: 2
+  },
+
+  /* ───────── VODKA ───────── */
+  {
+    category: "Vodka",
+    question: "Nga çfarë prodhohet kryesisht Vodka?",
+    options: [
+      "Agava blu dhe ujë burimor",
+      "Fermentimi dhe distilimi i drithërave, patateve ose materialeve bujqësore",
+      "Verë e bardhë e vjetruar në fuçi lisi",
+      "Kallamë sheqeri dhe melasa"
+    ],
+    correct: 1
+  },
+  {
+    category: "Vodka",
+    question: "Grey Goose është çfarë lloji vodke?",
+    options: [
+      "Potato Vodka",
+      "Rye Vodka",
+      "Grape Vodka",
+      "Wheat Vodka"
+    ],
+    correct: 3
+  },
+  {
+    category: "Vodka",
+    question: "Cila vodkë ka bazë thekre polake dhe profil pak pikant me vanilje?",
+    options: [
+      "Grey Goose",
+      "Finlandia",
+      "Belvedere",
+      "Beluga Noble"
+    ],
+    correct: 2
+  },
+  {
+    category: "Vodka",
+    question: "Cila vodkë ka bazë elb gjashtë-rreshtor finlandez dhe ujë burimi akullnajor?",
+    options: [
+      "Beluga Noble",
+      "Grey Goose",
+      "Belvedere",
+      "Finlandia"
+    ],
+    correct: 3
+  },
+  {
+    category: "Vodka",
+    question: "Cila vodkë premium ka ujë artezian siberian dhe kalon periudhë pushimi pas distilimit?",
+    options: [
+      "Grey Goose",
+      "Beluga Noble",
+      "Finlandia",
+      "Belvedere"
+    ],
+    correct: 1
+  },
+  {
+    category: "Vodka",
+    question: "Cili tonik rekomandohet për Grey Goose dhe Beluga Noble?",
+    options: [
+      "Fever-Tree Indian",
+      "Schweppes Indian Tonic",
+      "Fever-Tree Mediterranean",
+      "1724 Tonic Water"
+    ],
+    correct: 2
+  },
+
+  /* ───────── GIN ───────── */
+  {
+    category: "Gin",
+    question: "Cila është aroma kryesore që duhet të ketë çdo Gin?",
+    options: [
+      "Trëndafil dhe kastravec",
+      "Dëllinja (juniper)",
+      "Portokall dhe limon",
+      "Borzilok dhe rozmarinë"
+    ],
+    correct: 1
+  },
+  {
+    category: "Gin",
+    question: "Hendrick's Gin dallohet me cilat botanika unike?",
+    options: [
+      "Borzilok, kastravec, rozmarinë",
+      "Angelica, dëllinjë, koriandër",
+      "Trëndafil dhe kastravec",
+      "Ullinj, rozmarinë, trumzë"
+    ],
+    correct: 2
+  },
+  {
+    category: "Gin",
+    question: "Gin Mare klasifikohet si çfarë stili dhe ka cilat botanika?",
+    options: [
+      "London Dry – dëllinjë, angelica, koriandër",
+      "Mediterranean Gin – ullinj, rozmarinë, borzilok, trumzë",
+      "Contemporary Gin – trëndafil, kastravec",
+      "Atlantic Gin – hibiscus, mente, eukalipt"
+    ],
+    correct: 1
+  },
+  {
+    category: "Gin",
+    question: "Monkey 47 ka sa botanika?",
+    options: [
+      "22",
+      "30",
+      "47",
+      "56"
+    ],
+    correct: 2
+  },
+  {
+    category: "Gin",
+    question: "Cili tonik rekomandohet për Hendrick's Gin?",
+    options: [
+      "Fever-Tree Indian",
+      "Fever-Tree Mediterranean",
+      "Fever-Tree Elderflower",
+      "1724 Tonic Water"
+    ],
+    correct: 2
+  },
+  {
+    category: "Gin",
+    question: "Nordés është çfarë stili gini dhe cili tonik i përshtatet?",
+    options: [
+      "London Dry – Fever-Tree Indian",
+      "Mediterranean – Fever-Tree Mediterranean",
+      "Atlantic Gin – 1724 Tonic Water",
+      "Contemporary – Fever-Tree Elderflower"
+    ],
+    correct: 2
+  },
+  {
+    category: "Gin",
+    question: "Bombay Sapphire dhe Tanqueray janë të dy çfarë stili?",
+    options: [
+      "Contemporary Gin",
+      "Mediterranean Gin",
+      "Atlantic Gin",
+      "London Dry Gin"
+    ],
+    correct: 3
+  },
+  {
+    category: "Gin",
+    question: "The Botanist vjen nga ishulli Islay dhe ka sa bimë lokale?",
+    options: [
+      "12",
+      "22",
+      "30",
+      "47"
+    ],
+    correct: 1
+  },
+  {
+    category: "Gin",
+    question: "Brooklyn Gin ka cilat botanika kryesore?",
+    options: [
+      "Ullinj, rozmarinë, borzilok",
+      "Dëllinjë, lëvore limoni, lëvore portokalli, koriandër, livando",
+      "Hibiscus, mente, eukalipt",
+      "Domate të zeza, agrume"
+    ],
+    correct: 1
+  },
+  {
+    category: "Gin",
+    question: "Black Tomato Gin ka cilat botanika karakteristike?",
+    options: [
+      "Trëndafil, kastravec, dëllinjë",
+      "Dëllinjë, domate të zeza, agrume",
+      "Dëllinjë, borzilok, kastravec",
+      "Ullinj, rozmarinë, limon"
+    ],
+    correct: 1
+  },
+
+  /* ───────── LIQUEUR & AMARO ───────── */
+  {
+    category: "Liqueur & Amaro",
+    question: "Çfarë është Liqueur?",
+    options: [
+      "Spirit neutral i distiluar nga drithërat",
+      "Spirit i aromatizuar me fruta, erëza ose krem dhe me sheqer të shtuar",
+      "Verë e fortifikuar me botanika",
+      "Brandy i vjetruar në fuçi lisi"
+    ],
+    correct: 1
+  },
+  {
+    category: "Liqueur & Amaro",
+    question: "Baileys ka bazë cilën spirit dhe produkt?",
+    options: [
+      "Bourbon amerikan dhe krem",
+      "Vodka ruse dhe krem qumështi",
+      "Whiskey irlandez dhe krem qumështi",
+      "Scotch whisky dhe çokollatë"
+    ],
+    correct: 2
+  },
+  {
+    category: "Liqueur & Amaro",
+    question: "Disaronno është çfarë lloji dhe ka çfarë profili?",
+    options: [
+      "Anise Liqueur – jamball, anise",
+      "Cream Liqueur – kremoz, vanilje",
+      "Amaretto – bajame, marzipan",
+      "Amaro – mentol, erëza"
+    ],
+    correct: 2
+  },
+  {
+    category: "Liqueur & Amaro",
+    question: "Campari klasifikohet si?",
+    options: [
+      "Digestiv, Cream Liqueur",
+      "Aperitiv, Amaro bitter me portokall të hidhur",
+      "Digestiv, Vermouth",
+      "Aperitiv, London Dry Spirit"
+    ],
+    correct: 1
+  },
+  {
+    category: "Liqueur & Amaro",
+    question: "Fernet Branca ka cilat botanika kryesore?",
+    options: [
+      "Dëllinjë, koriandër, limon",
+      "Bajame, infuzion kajsie",
+      "Myrrh, kamomil, kardamom",
+      "56 bimë dhe rrënjë"
+    ],
+    correct: 2
+  },
+  {
+    category: "Liqueur & Amaro",
+    question: "Jägermeister ka sa bimë dhe rrënjë në formulë?",
+    options: [
+      "22",
+      "29",
+      "40",
+      "56"
+    ],
+    correct: 3
+  },
+  {
+    category: "Liqueur & Amaro",
+    question: "Cili Amaro ka 29 bimë kalabreze dhe profil agrume-jamball?",
+    options: [
+      "Montenegro",
+      "Averna",
+      "Vecchio Amaro del Capo",
+      "Lucano"
+    ],
+    correct: 2
+  },
+  {
+    category: "Liqueur & Amaro",
+    question: "Cili Amaro ka profil floral me portokall dhe mbi 40 bimë?",
+    options: [
+      "Averna",
+      "Montenegro",
+      "Lucano",
+      "Campari"
+    ],
+    correct: 1
+  },
+
+  /* ───────── VERMOUTH ───────── */
+  {
+    category: "Vermouth",
+    question: "Çfarë është Vermouth?",
+    options: [
+      "Spirit neutral i prodhuar nga drithërat",
+      "Verë e fortifikuar dhe e aromatizuar me bimë, erëza, rrënjë dhe agrume",
+      "Liker me sheqer dhe fruta",
+      "Brandy i vjetruar në fuçi lisi"
+    ],
+    correct: 1
+  },
+  {
+    category: "Vermouth",
+    question: "Cili lloj Vermouth rekomandohet për koktejin Martini klasik?",
+    options: [
+      "Rosso Vermouth",
+      "Bianco Vermouth",
+      "Dry Vermouth",
+      "Rosato Vermouth"
+    ],
+    correct: 2
+  },
+  {
+    category: "Vermouth",
+    question: "Martini Rosso ka çfarë profili dhe klasifikimi?",
+    options: [
+      "Karamel, bimor – Aperitiv",
+      "Vanilje, erëza – Digestiv",
+      "Bitter, agrume – Aperitiv",
+      "Thatë, pak i hidhur – Aperitiv"
+    ],
+    correct: 0
+  },
+
+  /* ───────── TEQUILA ───────── */
+  {
+    category: "Tequila",
+    question: "Nga çfarë prodhohet Tequila?",
+    options: [
+      "Melasa e kallamit të sheqerit",
+      "Grurë dhe misër",
+      "Agava blu, me origjinë nga Meksika",
+      "Rrush dhe verë e bardhë"
+    ],
+    correct: 2
+  },
+  {
+    category: "Tequila",
+    question: "Cili është varianti Tequila i vjetruar me profil vanilje dhe lisi?",
+    options: [
+      "Blanco",
+      "Reposado",
+      "Gold",
+      "Extra Añejo"
+    ],
+    correct: 1
+  },
+  {
+    category: "Tequila",
+    question: "Patrón Silver dhe Volcán klasifikohen si?",
+    options: [
+      "Reposado – Digestiv",
+      "Añejo – Digestiv",
+      "Blanco – Aperitiv",
+      "Extra Añejo – Digestiv"
+    ],
+    correct: 2
+  },
+  {
+    category: "Tequila",
+    question: "Sangre Reposado klasifikohet si?",
+    options: [
+      "Aperitiv",
+      "Digestiv",
+      "Long Drink",
+      "Neutral spirit"
+    ],
+    correct: 1
+  },
+
+  /* ───────── RUM ───────── */
+  {
+    category: "Rum",
+    question: "Nga çfarë prodhohet Rum?",
+    options: [
+      "Grurë dhe elb i maltuar",
+      "Agava blu",
+      "Melasa ose lëngu i kallamit të sheqerit",
+      "Patate dhe ujë burimor"
+    ],
+    correct: 2
+  },
+  {
+    category: "Rum",
+    question: "Havana Club 7 vjen nga cili vend?",
+    options: [
+      "Venezuelë",
+      "Panama",
+      "Kubë",
+      "Nikaragua"
+    ],
+    correct: 2
+  },
+  {
+    category: "Rum",
+    question: "El Dorado 21 vjen nga cili vend dhe ka çfarë profili?",
+    options: [
+      "Kubë – kakao, duhan",
+      "Panama – vanilje, dru",
+      "Venezuelë – karamel, vanilje",
+      "Guyana – fruta të thata, mjaltë"
+    ],
+    correct: 3
+  },
+  {
+    category: "Rum",
+    question: "Flor de Caña vjen nga cili vend?",
+    options: [
+      "Kubë",
+      "Nikaragua",
+      "Panama",
+      "Venezuelë"
+    ],
+    correct: 1
+  },
+
+  /* ───────── COGNAC ───────── */
+  {
+    category: "Cognac",
+    question: "Çfarë është Cognac dhe si prodhohet?",
+    options: [
+      "Spirit meksikan nga agava blu",
+      "Vodka premium nga grurë dimëror francez",
+      "Brandy francez nga verë e bardhë, i vjetruar në fuçi lisi",
+      "Spirit irish i distiluar 3 herë"
+    ],
+    correct: 2
+  },
+  {
+    category: "Cognac",
+    question: "Cili klasifikim Cognac kërkon minimum 10 vite vjetrim?",
+    options: [
+      "VS",
+      "VSOP",
+      "XO",
+      "Napoleon"
+    ],
+    correct: 2
+  },
+  {
+    category: "Cognac",
+    question: "Courvoisier VSOP ka çfarë profili?",
+    options: [
+      "Fruta të freskëta",
+      "Çokollatë, fruta të thata",
+      "Kakao, lëkurë, erëza",
+      "Vanilje, bajame"
+    ],
+    correct: 3
+  },
+  {
+    category: "Cognac",
+    question: "Hennessy XO ka çfarë profili?",
+    options: [
+      "Fruta të freskëta",
+      "Vanilje, bajame",
+      "Kakao, lëkurë, erëza",
+      "Mjaltë, fruta verore"
+    ],
+    correct: 2
+  },
+
+  /* ───────── WHISKY ───────── */
+  {
+    category: "Whisky",
+    question: "Bourbon duhet të ketë minimum sa % misër dhe prodhohet vetëm ku?",
+    options: [
+      "30% misër – Skoci",
+      "51% misër – vetëm SHBA",
+      "70% misër – Irlandë",
+      "100% misër – Kanada"
+    ],
+    correct: 1
+  },
+  {
+    category: "Whisky",
+    question: "Tennessee Whiskey si dallohet nga Bourbon?",
+    options: [
+      "Ka bazë thekre, jo misër",
+      "Filtrohet me qymyr panje (charcoal filtering)",
+      "Distilohet 3 herë",
+      "Vjetrohet minimumi 10 vite"
+    ],
+    correct: 1
+  },
+  {
+    category: "Whisky",
+    question: "Irish Whiskey zakonisht distilohet sa herë?",
+    options: [
+      "1 herë",
+      "2 herë",
+      "3 herë",
+      "4 herë"
+    ],
+    correct: 2
+  },
+  {
+    category: "Whisky",
+    question: "Cili Scotch Single Malt ka profil torfë intensive?",
+    options: [
+      "Glenfiddich 12",
+      "Macallan 12",
+      "Talisker 10",
+      "Ardbeg"
+    ],
+    correct: 3
+  },
+  {
+    category: "Whisky",
+    question: "Lagavulin 16 ka çfarë profili?",
+    options: [
+      "Dardhë, mollë",
+      "Sherry, vanilje",
+      "Tym, jod, kripë deti",
+      "Vanilje, karamel"
+    ],
+    correct: 2
+  },
+  {
+    category: "Whisky",
+    question: "Macallan 12 ka çfarë profili?",
+    options: [
+      "Torfë, tym",
+      "Sherry, vanilje",
+      "Dardhë, mollë",
+      "Piper, detar"
+    ],
+    correct: 1
+  },
+  {
+    category: "Whisky",
+    question: "Jack Daniel's është çfarë kategorie whisky?",
+    options: [
+      "Scotch Blended",
+      "Irish Whiskey",
+      "Bourbon",
+      "Tennessee Whiskey"
+    ],
+    correct: 3
+  },
+  {
+    category: "Whisky",
+    question: "Jameson është çfarë kategorie whisky dhe ka çfarë profili?",
+    options: [
+      "Bourbon – vanilje, karamel",
+      "Scotch Single Malt – tym, torfë",
+      "Irish Whiskey – i butë, vanilje",
+      "Tennessee Whiskey – banane, karamel"
+    ],
+    correct: 2
+  },
+  {
+    category: "Whisky",
+    question: "Chivas Regal 12 ka çfarë profili?",
+    options: [
+      "Tym, vanilje",
+      "Mjaltë, mollë",
+      "Çokollatë, fruta të thata",
+      "Torfë, jod"
+    ],
+    correct: 1
+  }
+];
+
+/* ================================================================
+   SHUFFLE UTILITIES
+================================================================ */
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Merr pyetjet, shuffle-on rendin dhe opsionet (mban track të saktit)
+function buildShuffledQuestions() {
+  return shuffle(ALL_QUESTIONS).map(q => {
+    const indexed = q.options.map((text, i) => ({ text, isCorrect: i === q.correct }));
+    const shuffledOpts = shuffle(indexed);
+    return {
+      category: q.category,
+      question: q.question,
+      options: shuffledOpts.map(o => o.text),
+      correct: shuffledOpts.findIndex(o => o.isCorrect)
+    };
+  });
+}
+
+/* ================================================================
+   GJENDJA E QUIZIT
+================================================================ */
+let questions   = [];
+let current     = 0;
+let score       = 0;
+let answered    = false;
+
+// Statistikat sipas kategorisë
+let catStats = {};
+
+/* ================================================================
+   INICIALIZIMI
+================================================================ */
+function startQuiz() {
+  questions = buildShuffledQuestions();
+  current   = 0;
+  score     = 0;
+  answered  = false;
+  catStats  = {};
+
+  document.getElementById('quizScreen').style.display  = '';
+  document.getElementById('resultScreen').classList.remove('show');
+
+  renderQuestion();
+}
+
+/* ================================================================
+   RENDER PYETJES
+================================================================ */
+function renderQuestion() {
+  const q = questions[current];
+
+  // Header
+  document.getElementById('progressLabel').textContent =
+    `Pyetja ${current + 1} nga ${questions.length}`;
+  document.getElementById('scoreBadge').textContent = `${score} pikë`;
+
+  // Progress bar
+  const pct = (current / questions.length) * 100;
+  document.getElementById('progressBar').style.width = pct + '%';
+
+  // Kategoria
+  document.getElementById('catTag').textContent = q.category;
+
+  // Pyetja
+  document.getElementById('questionText').textContent = q.question;
+
+  // Opsionet
+  const list = document.getElementById('optionsList');
+  const letters = ['A', 'B', 'C', 'D'];
+  list.innerHTML = q.options.map((opt, i) => `
+    <button class="option" id="opt${i}" onclick="selectOption(${i})">
+      <span class="option-letter">${letters[i]}</span>
+      <span>${opt}</span>
+    </button>
+  `).join('');
+
+  // Feedback & buton
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback';
+  fb.textContent = '';
+
+  const btn = document.getElementById('btnNext');
+  btn.className = 'btn-next';
+  btn.textContent = current === questions.length - 1 ? 'Shiko rezultatin ✓' : 'Pyetja tjetër →';
+
+  answered = false;
+
+  // Animacion refresh
+  const body = document.getElementById('quizBody');
+  body.style.animation = 'none';
+  void body.offsetWidth;
+  body.style.animation = 'fadeIn .35s ease';
+}
+
+/* ================================================================
+   SELEKTIMI I OPSIONIT
+================================================================ */
+function selectOption(idx) {
+  if (answered) return;
+  answered = true;
+
+  const q = questions[current];
+  const isCorrect = idx === q.correct;
+
+  // CSS feedback
+  document.querySelectorAll('.option').forEach((btn, i) => {
+    btn.classList.add('disabled');
+    if (i === q.correct) btn.classList.add('correct');
+    else if (i === idx && !isCorrect) btn.classList.add('wrong');
+  });
+
+  // Pikë dhe statistika
+  if (isCorrect) score++;
+  if (!catStats[q.category]) catStats[q.category] = { correct: 0, total: 0 };
+  catStats[q.category].total++;
+  if (isCorrect) catStats[q.category].correct++;
+
+  // Mesazhi feedback
+  const fb = document.getElementById('feedback');
+  if (isCorrect) {
+    fb.className = 'feedback ok show';
+    fb.textContent = '✓ Saktë! Bravo!';
+  } else {
+    fb.className = 'feedback err show';
+    fb.textContent = `✗ Gabim! Përgjigja e saktë: "${q.options[q.correct]}"`;
+  }
+
+  document.getElementById('btnNext').classList.add('show');
+}
+
+/* ================================================================
+   PYETJA TJETËR / FUND
+================================================================ */
+function nextQuestion() {
+  current++;
+  if (current < questions.length) {
+    renderQuestion();
+  } else {
+    showResult();
+  }
+}
+
+/* ================================================================
+   EKRANI I REZULTATIT
+================================================================ */
+function showResult() {
+  document.getElementById('quizScreen').style.display = 'none';
+  const rs = document.getElementById('resultScreen');
+  rs.classList.add('show');
+
+  const pct = Math.round((score / questions.length) * 100);
+
+  // Ikona dhe mesazhi
+  let icon, msg;
+  if (pct === 100) {
+    icon = '🏆'; msg = 'Perfekt! Ti je një ekspert i vërtetë i botës së pijeve! Asnjë pyetje nuk të shpëtoi!';
+  } else if (pct >= 80) {
+    icon = '🥇'; msg = 'Shkëlqyeshëm! Njohuritë e tua për kokteje dhe spirita janë mbi mesataren. Vazhdo kështu!';
+  } else if (pct >= 60) {
+    icon = '🥈'; msg = 'Shumë mirë! Ke njohuri solide. Pak praktikë tjetër dhe do të jesh ekspert!';
+  } else if (pct >= 40) {
+    icon = '🥉'; msg = 'Jo keq! Ke baza të mira. Lexo dokumentet dhe provo sërish – do të befasohesh!';
+  } else {
+    icon = '📚'; msg = 'Mos u dekurajо! Kjo botë kërkon kohë. Shfletо menunë dhe provo sërish – mundesh!';
+  }
+
+  document.getElementById('resultIcon').textContent = icon;
+  document.getElementById('resultScore').textContent = score;
+  document.getElementById('resultOutOf').textContent = `pikë nga ${questions.length} (${pct}%)`;
+  document.getElementById('resultMsg').textContent = msg;
+
+  // Barrat sipas kategorisë (animate pas render)
+  const barsDiv = document.getElementById('resultBars');
+  barsDiv.innerHTML = Object.entries(catStats)
+    .sort((a, b) => b[1].total - a[1].total)
+    .map(([cat, s]) => {
+      const p = Math.round((s.correct / s.total) * 100);
+      return `
+        <div class="result-bar-row">
+          <div class="result-bar-label">${cat}</div>
+          <div class="result-bar-track">
+            <div class="result-bar-fill" data-pct="${p}" style="width:0%"></div>
+          </div>
+          <div class="result-bar-pct">${p}%</div>
+        </div>`;
+    }).join('');
+
+  // Animate barrat pas 100ms
+  setTimeout(() => {
+    document.querySelectorAll('.result-bar-fill').forEach(el => {
+      el.style.width = el.dataset.pct + '%';
+    });
+  }, 150);
+}
+
+/* ================================================================
+   RESTART
+================================================================ */
+function restartQuiz() {
+  startQuiz();
+}
+
+/* ── START ── */
+startQuiz();
+</script>
+</body>
+</html>
