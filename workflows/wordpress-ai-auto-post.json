@@ -1,0 +1,333 @@
+{
+  "name": "WordPress Auto-Post me AI (max 500 fjalë)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger-001",
+      "name": "Çdo ditë në 09:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfg-wpurl",
+              "name": "wpUrl",
+              "value": "https://faqja-juaj.com",
+              "type": "string"
+            },
+            {
+              "id": "cfg-status",
+              "name": "postStatus",
+              "value": "publish",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-config-001",
+      "name": "Konfigurimi",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [200, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lista e kategorive dhe temave — shto/ndrysho sipas nevojës\nconst categories = [\n  {\n    name: 'Ekonomi',\n    topics: [\n      'Inflacioni dhe ndikimi i tij në buxhetin familjar',\n      'Rritja ekonomike dhe tregu i punës në Shqipëri',\n      'Eksportet dhe importet: si ndikojnë në ekonominë vendase',\n      'Remitancat dhe roli i tyre në ekonominë shqiptare',\n      'Turizmi si motor i ekonomisë'\n    ]\n  },\n  {\n    name: 'Kredi',\n    topics: [\n      'Si të merrni një kredi hipotekare: hapat kryesorë',\n      'Kredi konsumatore: çfarë duhet të dini para se të aplikoni',\n      'Norma e interesit: fikse apo e ndryshueshme?',\n      'Si të përmirësoni historikun tuaj kreditor',\n      'Rifinancimi i kredisë: kur ia vlen?'\n    ]\n  },\n  {\n    name: 'Banka',\n    topics: [\n      'Si të zgjidhni bankën e duhur për nevojat tuaja',\n      'Llogaritë e kursimit dhe depozitat me afat',\n      'Shërbimet bankare online: siguria dhe përfitimet',\n      'Komisionet bankare: si të kurseni',\n      'Kartat e kreditit kundrejt kartave të debitit'\n    ]\n  },\n  {\n    name: 'Investime',\n    topics: [\n      'Bazat e investimit për fillestarët',\n      'Investimi në pasuri të paluajtshme në Shqipëri',\n      'Obligacionet qeveritare: një investim i sigurt?',\n      'Diversifikimi i portofolit: pse është i rëndësishëm',\n      'Fondet e investimit: si funksionojnë'\n    ]\n  },\n  {\n    name: 'Financa Personale',\n    topics: [\n      'Si të krijoni një buxhet mujor efektiv',\n      'Fondi i emergjencës: sa duhet të kurseni',\n      'Planifikimi i pensionit: fillo herët',\n      'Si të dilni nga borxhet: strategji praktike',\n      'Edukimi financiar për të rinjtë'\n    ]\n  },\n  {\n    name: 'Sigurime',\n    topics: [\n      'Sigurimi i jetës: a ju nevojitet vërtet?',\n      'Sigurimi i shtëpisë dhe pronës',\n      'Sigurimi shëndetësor privat në Shqipëri',\n      'Sigurimi i makinës: TPL dhe kasko',\n      'Si të zgjidhni policën e duhur të sigurimit'\n    ]\n  }\n];\n\n// Rrotullim: çdo ditë kategori tjetër, çdo cikël temë tjetër\nconst now = new Date();\nconst start = new Date(now.getFullYear(), 0, 0);\nconst dayOfYear = Math.floor((now - start) / 86400000);\nconst cat = categories[dayOfYear % categories.length];\nconst topic = cat.topics[Math.floor(dayOfYear / categories.length) % cat.topics.length];\n\n// Trupi i kërkesës për Claude API (Anthropic Messages API)\nconst claudeBody = {\n  model: 'claude-opus-4-8',\n  max_tokens: 8000,\n  system: [\n    'Ti je gazetar dhe ekspert i ekonomisë e financave që shkruan për një portal informativ shqiptar.',\n    'Shkruan artikuj informues, të saktë dhe të lexueshëm për publikun e gjerë, në gjuhën shqipe standarde.',\n    'Rregulla të detyrueshme:',\n    '- Artikulli duhet të ketë MAKSIMUMI 500 fjalë. Kjo është kufi i prerë.',\n    '- content_html duhet të jetë HTML i pastër: vetëm <h2>, <h3>, <p>, <ul>, <li>, <strong>. Pa <h1>, pa <html>, <head> ose <body>.',\n    '- Titulli duhet të jetë tërheqës, maksimumi 70 karaktere, pa thonjëza.',\n    '- excerpt: 1-2 fjali përmbledhëse (max 40 fjalë).',\n    '- Mos shpik statistika ose shifra të sakta që nuk i di me siguri; përdor formulime të përgjithshme.',\n    '- Ton profesional por i afërt, i përshtatur për lexuesin shqiptar.'\n  ].join('\\n'),\n  messages: [\n    {\n      role: 'user',\n      content: `Shkruaj një artikull për kategorinë \"${cat.name}\" me temën: \"${topic}\". Mbaje artikullin nën 500 fjalë.`\n    }\n  ],\n  output_config: {\n    format: {\n      type: 'json_schema',\n      schema: {\n        type: 'object',\n        properties: {\n          title: { type: 'string', description: 'Titulli i artikullit, max 70 karaktere' },\n          content_html: { type: 'string', description: 'Përmbajtja e artikullit në HTML, max 500 fjalë' },\n          excerpt: { type: 'string', description: 'Përmbledhje e shkurtër, 1-2 fjali' }\n        },\n        required: ['title', 'content_html', 'excerpt'],\n        additionalProperties: false\n      }\n    }\n  }\n};\n\nreturn [{ json: { category: cat.name, topic, claudeBody } }];"
+      },
+      "id": "code-pick-category-001",
+      "name": "Zgjidh Kategorinë",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.claudeBody) }}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "http-claude-001",
+      "name": "Gjenero Artikullin (Claude)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [620, 0],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ME",
+          "name": "Anthropic API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const resp = $input.first().json;\n\nif (resp.stop_reason === 'refusal') {\n  throw new Error('Claude e refuzoi kërkesën — provo një temë tjetër.');\n}\nif (resp.stop_reason === 'max_tokens') {\n  throw new Error('Përgjigja u pre në mes — rrit max_tokens në nyjen \"Zgjidh Kategorinë\".');\n}\n\nconst textBlock = (resp.content || []).find(b => b.type === 'text');\nif (!textBlock) {\n  throw new Error('Nuk u gjet përmbajtje tekstuale në përgjigjen e Claude.');\n}\n\nconst article = JSON.parse(textBlock.text);\n\n// Siguri shtesë: kufizo në max 500 fjalë duke hequr paragrafë nga fundi\nconst countWords = (html) =>\n  html.replace(/<[^>]+>/g, ' ').trim().split(/\\s+/).filter(Boolean).length;\n\nif (countWords(article.content_html) > 500) {\n  const parts = article.content_html.split(/(?<=<\\/p>)/);\n  while (parts.length > 1 && countWords(parts.join('')) > 500) {\n    parts.pop();\n  }\n  article.content_html = parts.join('');\n}\n\nconst meta = $('Zgjidh Kategorinë').first().json;\n\nreturn [{\n  json: {\n    title: article.title,\n    content: article.content_html,\n    excerpt: article.excerpt,\n    category: meta.category,\n    topic: meta.topic,\n    wordCount: countWords(article.content_html)\n  }\n}];"
+      },
+      "id": "code-parse-001",
+      "name": "Përpuno Përgjigjen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [840, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Konfigurimi').first().json.wpUrl }}/wp-json/wp/v2/categories",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "search",
+              "value": "={{ $json.category }}"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "http-wp-search-cat-001",
+      "name": "Kërko Kategorinë në WP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1060, 0],
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME",
+          "name": "WordPress Application Password"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const wanted = $('Përpuno Përgjigjen').first().json.category.toLowerCase();\nconst match = $input.all()\n  .map(i => i.json)\n  .find(c => c && c.name && c.name.toLowerCase() === wanted);\n\nreturn [{ json: { categoryId: match ? match.id : null } }];"
+      },
+      "id": "code-check-cat-001",
+      "name": "Kontrollo Kategorinë",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1280, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "if-cat-exists",
+              "leftValue": "={{ $json.categoryId !== null }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-category-001",
+      "name": "Ekziston Kategoria?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1500, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfigurimi').first().json.wpUrl }}/wp-json/wp/v2/categories",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ name: $('Përpuno Përgjigjen').first().json.category }) }}",
+        "options": {}
+      },
+      "id": "http-wp-create-cat-001",
+      "name": "Krijo Kategorinë",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1720, 180],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME",
+          "name": "WordPress Application Password"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfigurimi').first().json.wpUrl }}/wp-json/wp/v2/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  title: $('Përpuno Përgjigjen').first().json.title,\n  content: $('Përpuno Përgjigjen').first().json.content,\n  excerpt: $('Përpuno Përgjigjen').first().json.excerpt,\n  status: $('Konfigurimi').first().json.postStatus,\n  categories: [ $json.categoryId ?? $json.id ]\n}) }}",
+        "options": {}
+      },
+      "id": "http-wp-post-001",
+      "name": "Posto në WordPress",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1940, 0],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME",
+          "name": "WordPress Application Password"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Çdo ditë në 09:00": {
+      "main": [
+        [
+          {
+            "node": "Konfigurimi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfigurimi": {
+      "main": [
+        [
+          {
+            "node": "Zgjidh Kategorinë",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zgjidh Kategorinë": {
+      "main": [
+        [
+          {
+            "node": "Gjenero Artikullin (Claude)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gjenero Artikullin (Claude)": {
+      "main": [
+        [
+          {
+            "node": "Përpuno Përgjigjen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Përpuno Përgjigjen": {
+      "main": [
+        [
+          {
+            "node": "Kërko Kategorinë në WP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kërko Kategorinë në WP": {
+      "main": [
+        [
+          {
+            "node": "Kontrollo Kategorinë",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kontrollo Kategorinë": {
+      "main": [
+        [
+          {
+            "node": "Ekziston Kategoria?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ekziston Kategoria?": {
+      "main": [
+        [
+          {
+            "node": "Posto në WordPress",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Krijo Kategorinë",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Krijo Kategorinë": {
+      "main": [
+        [
+          {
+            "node": "Posto në WordPress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
